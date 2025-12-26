@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="connected">CONNECTED</string>
+    <string name="disconnected">DISCONNECTED</string>
+    <string name="open">OPEN</string>
+    <string name="return_page">RETURN</string>
+    <string name="closed">CLOSED</string>
+</resources>
