@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.SeekBar;
 import android.widget.Switch;
 import android.widget.TextView;
 
@@ -27,6 +28,8 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.google.android.material.tabs.TabLayout;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -57,6 +60,23 @@ public class MainActivity extends AppCompatActivity {
     private TextView rollTextView;
     private TextView yawTextView;
 
+    // --- Settings tab ---
+    private View statusGroup;
+    private View settingsLayout;
+    private Switch buzzerSwitch;
+    private Switch autoHeatingSwitch;
+    private SeekBar grayThresholdSeek;
+    private SeekBar heatingThresholdSeek;
+    private TextView grayThresholdLabel;
+    private TextView heatingThresholdLabel;
+    // True while the controls are being set from a value received from the controller
+    private boolean applyingSettings = false;
+
+    // Ranges of the settings, the same as in the controller firmware
+    private static final int GRAY_THRESHOLD_MIN = 50;
+    private static final int GRAY_THRESHOLD_STEP = 5;
+    private static final int HEATING_THRESHOLD_MIN = 1;
+
     // Queue for enabling notifications sequentially
     private final Queue<BluetoothGattCharacteristic> notificationQueue = new LinkedList<>();
 
@@ -77,6 +97,8 @@ public class MainActivity extends AppCompatActivity {
             "00000000-0000-0000-0000-000000000006");
     private static final UUID HEATER_UUID = UUID.fromString(
             "00000000-0000-0000-0000-000000000007");
+    private static final UUID SETTINGS_UUID = UUID.fromString(
+            "00000000-0000-0000-0000-000000000008");
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -108,6 +130,101 @@ public class MainActivity extends AppCompatActivity {
 
         // --- Lock the heater switch ---
         heaterSwitch.setClickable(false);
+
+        setupSettingsTab();
+    }
+
+    private void setupSettingsTab() {
+        statusGroup = findViewById(R.id.status_group);
+        settingsLayout = findViewById(R.id.settings_layout);
+        buzzerSwitch = findViewById(R.id.buzzer_switch);
+        autoHeatingSwitch = findViewById(R.id.auto_heating_switch);
+        grayThresholdSeek = findViewById(R.id.gray_threshold_seek);
+        heatingThresholdSeek = findViewById(R.id.heating_threshold_seek);
+        grayThresholdLabel = findViewById(R.id.gray_threshold_label);
+        heatingThresholdLabel = findViewById(R.id.heating_threshold_label);
+
+        TabLayout tabLayout = findViewById(R.id.tab_layout);
+        tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                boolean settings = tab.getPosition() == 1;
+                statusGroup.setVisibility(settings ? View.GONE : View.VISIBLE);
+                settingsLayout.setVisibility(settings ? View.VISIBLE : View.GONE);
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) { }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) { }
+        });
+
+        buzzerSwitch.setOnCheckedChangeListener((button, checked) -> sendSettings());
+        autoHeatingSwitch.setOnCheckedChangeListener((button, checked) -> sendSettings());
+        SeekBar.OnSeekBarChangeListener seekListener = new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                updateSettingsLabels();
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) { }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                // Send once, when the finger is lifted
+                sendSettings();
+            }
+        };
+        grayThresholdSeek.setOnSeekBarChangeListener(seekListener);
+        heatingThresholdSeek.setOnSeekBarChangeListener(seekListener);
+        updateSettingsLabels();
+    }
+
+    private int grayThreshold() {
+        return GRAY_THRESHOLD_MIN + grayThresholdSeek.getProgress() * GRAY_THRESHOLD_STEP;
+    }
+
+    private int heatingThreshold() {
+        return HEATING_THRESHOLD_MIN + heatingThresholdSeek.getProgress();
+    }
+
+    private void updateSettingsLabels() {
+        grayThresholdLabel.setText(getString(R.string.settings_gray_threshold, grayThreshold()));
+        heatingThresholdLabel.setText(getString(R.string.settings_heating_threshold, heatingThreshold()));
+    }
+
+    /** Sends all four settings; the controller answers with the values it accepted. */
+    private void sendSettings() {
+        if (applyingSettings) {
+            return;
+        }
+        byte[] payload = {
+                (byte) (buzzerSwitch.isChecked() ? 1 : 0),
+                (byte) grayThreshold(),
+                (byte) (autoHeatingSwitch.isChecked() ? 1 : 0),
+                (byte) heatingThreshold()
+        };
+        writeCharacteristic(MANAGER_SERVICE_UUID, SETTINGS_UUID, payload);
+    }
+
+    /** Shows the settings reported by the controller without sending them back. */
+    private void applySettings(byte[] data) {
+        applyingSettings = true;
+        buzzerSwitch.setChecked(data[0] != 0);
+        grayThresholdSeek.setProgress(((data[1] & 0xFF) - GRAY_THRESHOLD_MIN) / GRAY_THRESHOLD_STEP);
+        autoHeatingSwitch.setChecked(data[2] != 0);
+        heatingThresholdSeek.setProgress((data[3] & 0xFF) - HEATING_THRESHOLD_MIN);
+        updateSettingsLabels();
+        applyingSettings = false;
+    }
+
+    private void setSettingsEnabled(boolean enabled) {
+        buzzerSwitch.setEnabled(enabled);
+        autoHeatingSwitch.setEnabled(enabled);
+        grayThresholdSeek.setEnabled(enabled);
+        heatingThresholdSeek.setEnabled(enabled);
     }
 
     @Override
@@ -209,6 +326,7 @@ public class MainActivity extends AppCompatActivity {
     private void updateConnectionState(final boolean isConnected, final String statusMessage) {
         runOnUiThread(() -> {
             connectionText.setText(statusMessage);
+            setSettingsEnabled(isConnected);
             if (isConnected) {
                 connectionText.setTextColor(Color.rgb(0, 150, 0));
                 valveSwitch.setEnabled(true);
@@ -280,6 +398,7 @@ public class MainActivity extends AppCompatActivity {
                     notificationQueue.add(service.getCharacteristic(VALVE_UUID));
                     notificationQueue.add(service.getCharacteristic(HEATER_UUID));
                     notificationQueue.add(service.getCharacteristic(VALVE_LOCKED_UUID)); // Add the new one
+                    notificationQueue.add(service.getCharacteristic(SETTINGS_UUID));
                     // Start the process
                     enableNextNotification(gatt);
                 }
@@ -336,6 +455,17 @@ public class MainActivity extends AppCompatActivity {
             } else if (HEATER_UUID.equals(charUuid)) {
                 int state = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
                 runOnUiThread(() -> heaterSwitch.setChecked(state == 1));
+            } else if (SETTINGS_UUID.equals(charUuid)) {
+                byte[] data = characteristic.getValue();
+                if (data != null && data.length >= 4) {
+                    byte[] settings = data.clone();
+                    runOnUiThread(() -> {
+                        // Do not move a slider the user is holding
+                        if (!grayThresholdSeek.isPressed() && !heatingThresholdSeek.isPressed()) {
+                            applySettings(settings);
+                        }
+                    });
+                }
             } else if (VALVE_LOCKED_UUID.equals(charUuid)) {
                 // *** THE NEW LOCKING LOGIC ***
                 int lockState = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);

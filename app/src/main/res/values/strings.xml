@@ -5,4 +5,12 @@
     <string name="open">OPEN</string>
     <string name="return_page">RETURN</string>
     <string name="closed">CLOSED</string>
+    <string name="tab_status">Status</string>
+    <string name="tab_settings">Settings</string>
+    <string name="settings_gray_tank">Gray water tank</string>
+    <string name="settings_buzzer">Buzzer alarm</string>
+    <string name="settings_gray_threshold">Alarm level: %1$d %%</string>
+    <string name="settings_heating">Heating</string>
+    <string name="settings_auto_heating">Auto-heating</string>
+    <string name="settings_heating_threshold">Heating threshold: %1$d °C</string>
 </resources>
