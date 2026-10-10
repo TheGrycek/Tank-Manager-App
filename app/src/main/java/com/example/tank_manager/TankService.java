@@ -16,6 +16,7 @@ import android.bluetooth.BluetoothGattDescriptor;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.BluetoothStatusCodes;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -29,6 +30,7 @@ import android.os.IBinder;
 import android.os.Looper;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.ContextCompat;
 
@@ -189,13 +191,34 @@ public class TankService extends Service {
         BluetoothGattCharacteristic characteristic = service.getCharacteristic(characteristicUuid);
         if (characteristic == null) { Log.e(TAG, "Characteristic not found for write: " + characteristicUuid); return false; }
 
-        characteristic.setValue(value);
-        characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
-        if (!gatt.writeCharacteristic(characteristic)) {
+        if (!writeCharacteristic(gatt, characteristic, value)) {
             Log.e(TAG, "Failed to initiate write for characteristic: " + characteristicUuid);
             return false;
         }
         return true;
+    }
+
+    /** Write with response; the value-carrying call exists since Android 13. */
+    @SuppressLint("MissingPermission")
+    @SuppressWarnings("deprecation")
+    private static boolean writeCharacteristic(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, byte[] value) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return gatt.writeCharacteristic(characteristic, value,
+                    BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT) == BluetoothStatusCodes.SUCCESS;
+        }
+        characteristic.setValue(value);
+        characteristic.setWriteType(BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT);
+        return gatt.writeCharacteristic(characteristic);
+    }
+
+    @SuppressLint("MissingPermission")
+    @SuppressWarnings("deprecation")
+    private static boolean writeDescriptor(BluetoothGatt gatt, BluetoothGattDescriptor descriptor, byte[] value) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return gatt.writeDescriptor(descriptor, value) == BluetoothStatusCodes.SUCCESS;
+        }
+        descriptor.setValue(value);
+        return gatt.writeDescriptor(descriptor);
     }
 
     // ------------------------------------------------------------------ connection
@@ -397,13 +420,22 @@ public class TankService extends Service {
             enableNextNotification(gatt);
         }
 
+        // Android 13+ delivers the value with the callback
+        @Override
+        public void onCharacteristicChanged(@NonNull BluetoothGatt gatt, @NonNull BluetoothGattCharacteristic characteristic, @NonNull byte[] value) {
+            valueReceived(gatt, characteristic.getUuid(), value);
+        }
+
+        // Android 12 and lower (not called on newer systems, because the method above does not call super)
+        @SuppressWarnings("deprecation")
         @Override
         public void onCharacteristicChanged(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic) {
-            super.onCharacteristicChanged(gatt, characteristic);
-            UUID charUuid = characteristic.getUuid();
             // Copy now: the characteristic object is reused for the next notification
             byte[] raw = characteristic.getValue();
-            byte[] value = raw == null ? null : raw.clone();
+            valueReceived(gatt, characteristic.getUuid(), raw == null ? null : raw.clone());
+        }
+
+        private void valueReceived(BluetoothGatt gatt, UUID charUuid, byte[] value) {
             handler.post(() -> {
                 if (gatt != bluetoothGatt) {
                     return;
@@ -462,9 +494,9 @@ public class TankService extends Service {
 
         gatt.setCharacteristicNotification(characteristic, true);
         boolean notify = (characteristic.getProperties() & BluetoothGattCharacteristic.PROPERTY_NOTIFY) != 0;
-        descriptor.setValue(notify ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
-                : BluetoothGattDescriptor.ENABLE_INDICATION_VALUE);
-        if (!gatt.writeDescriptor(descriptor)) {
+        byte[] enable = notify ? BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE
+                : BluetoothGattDescriptor.ENABLE_INDICATION_VALUE;
+        if (!writeDescriptor(gatt, descriptor, enable)) {
             Log.w(TAG, "Could not write CCCD for " + characteristic.getUuid());
             enableNextNotification(gatt); // Try next one
         }

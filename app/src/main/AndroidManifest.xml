@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Informacja dla systemu: aplikacja używa BLE -->
+    <!-- Tells the system that the app needs BLE -->
     <uses-feature
         android:name="android.hardware.bluetooth_le"
         android:required="true" />
@@ -14,7 +14,7 @@
         tools:targetApi="s" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
 
-    <!-- Android 11 i niżej: skanowanie BLE wymaga uprawnienia lokalizacji -->
+    <!-- Android 11 and lower: a BLE scan needs the location permission -->
     <uses-permission
         android:name="android.permission.ACCESS_COARSE_LOCATION"
         android:maxSdkVersion="30" />
