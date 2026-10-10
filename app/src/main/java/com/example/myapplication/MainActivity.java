@@ -42,7 +42,8 @@ public class MainActivity extends AppCompatActivity {
     private static final UUID CLIENT_CHARACTERISTIC_CONFIG_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
     private BluetoothAdapter bluetoothAdapter;
-    private BluetoothGatt bluetoothGatt;
+    // The single GATT client of this activity; null whenever we are not connected or connecting
+    private volatile BluetoothGatt bluetoothGatt;
     private String deviceAddress;
 
     // --- UI Elements ---
@@ -110,37 +111,66 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onResume() {
-        super.onResume();
-        if (deviceAddress != null) {
-            Log.d(TAG, "Attempting to connect to device: " + deviceAddress);
-            updateConnectionState(false, "CONNECTING...");
-            connectToDevice();
-        } else {
-            updateConnectionState(false, getString(R.string.disconnected));
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        String selected = intent.getStringExtra("selected_device");
+        if (selected != null) {
+            // A device was picked from the list: always start from a clean connection
+            closeGatt();
+            deviceAddress = selected;
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (deviceAddress == null) {
+            updateConnectionState(false, getString(R.string.disconnected));
+        } else if (bluetoothGatt == null) {
+            // Connect only once: onResume also runs after the pairing dialog and screen unlock,
+            // and every extra GATT client would keep the link open after "disconnect"
+            Log.d(TAG, "Attempting to connect to device: " + deviceAddress);
+            updateConnectionState(false, "CONNECTING...");
+            connectToDevice();
+        }
+    }
+
+    @SuppressLint("MissingPermission") // checked by hasConnectPermission(), which knows the SDK level
     private void connectToDevice() {
-        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
-        if (device == null) {
-            Log.w(TAG, "Device not found. Unable to connect.");
-            updateConnectionState(false, "Device not found");
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled()) {
+            Log.w(TAG, "Bluetooth is off. Unable to connect.");
+            updateConnectionState(false, "Bluetooth is off");
             return;
         }
-
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+        if (!hasConnectPermission()) {
             Log.w(TAG, "BLUETOOTH_CONNECT permission not granted.");
             updateConnectionState(false, "Permission Denied");
             return;
         }
-        bluetoothGatt = device.connectGatt(this, false, gattCallback);
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(deviceAddress);
+        bluetoothGatt = device.connectGatt(this, false, gattCallback, BluetoothDevice.TRANSPORT_LE);
+        if (bluetoothGatt == null) {
+            updateConnectionState(false, getString(R.string.disconnected));
+        }
+    }
+
+    /** Drops the link and releases the GATT client, so the controller can advertise again. */
+    @SuppressLint("MissingPermission")
+    private void closeGatt() {
+        BluetoothGatt gatt = bluetoothGatt;
+        bluetoothGatt = null;
+        notificationQueue.clear();
+        if (gatt != null && hasConnectPermission()) {
+            gatt.disconnect();
+            gatt.close();
+        }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        breakBTConnection(null);
+        closeGatt();
     }
 
     public void openBTList(View v) {
@@ -149,14 +179,9 @@ public class MainActivity extends AppCompatActivity {
         startActivity(btListIntent);
     }
 
-    @SuppressLint("MissingPermission")
     public void breakBTConnection(View v) {
-        if (bluetoothGatt != null) {
-            Log.d(TAG, "Breaking Bluetooth connection.");
-            if (hasConnectPermission()) {
-                bluetoothGatt.disconnect();
-            }
-        }
+        Log.d(TAG, "Breaking Bluetooth connection.");
+        closeGatt();
         updateConnectionState(false, getString(R.string.disconnected));
         deviceAddress = null;
     }
@@ -216,20 +241,26 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
             super.onConnectionStateChange(gatt, status, newState);
-            if (newState == BluetoothProfile.STATE_CONNECTED) {
+            if (gatt != bluetoothGatt) {
+                // Callback of a client we already gave up on
+                if (hasConnectPermission()) gatt.close();
+                return;
+            }
+            if (newState == BluetoothProfile.STATE_CONNECTED && status == BluetoothGatt.GATT_SUCCESS) {
                 Log.i(TAG, "Connected to GATT server.");
                 updateConnectionState(true, getString(R.string.connected));
                 if (hasConnectPermission()) {
                     Log.i(TAG, "Attempting to start service discovery.");
                     gatt.discoverServices();
                 }
-            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
-                Log.i(TAG, "Disconnected from GATT server.");
+            } else {
+                // Disconnected, or the connection attempt failed (status != GATT_SUCCESS).
+                // Always release the client: a leaked one would block the next connection.
+                Log.i(TAG, "Disconnected from GATT server, status: " + status);
+                bluetoothGatt = null;
+                notificationQueue.clear();
+                if (hasConnectPermission()) gatt.close();
                 updateConnectionState(false, getString(R.string.disconnected));
-                if (bluetoothGatt != null) {
-                    if (hasConnectPermission()) bluetoothGatt.close();
-                    bluetoothGatt = null;
-                }
             }
         }
 
@@ -262,9 +293,11 @@ public class MainActivity extends AppCompatActivity {
             super.onDescriptorWrite(gatt, descriptor, status);
             if (status == BluetoothGatt.GATT_SUCCESS) {
                 Log.d(TAG, "Notification enabled for: " + descriptor.getCharacteristic().getUuid().toString());
-                // Process the next characteristic in the queue
-                enableNextNotification(gatt);
+            } else {
+                Log.w(TAG, "Enabling notification failed (" + status + ") for: " + descriptor.getCharacteristic().getUuid());
             }
+            // Process the next characteristic in the queue either way, one failure must not stop the rest
+            enableNextNotification(gatt);
         }
 
         @Override
@@ -277,8 +310,10 @@ public class MainActivity extends AppCompatActivity {
                 int level = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
                 runOnUiThread(() -> grayWaterLevelTextView.setText(level + " %"));
             } else if (GRAY_TEMP_SENSOR_UUID.equals(charUuid)) {
-                float temp = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT16, 0) / 100.0f;
-                runOnUiThread(() -> grayWaterTempTextView.setText(String.format("%.1f °C", temp)));
+                int raw = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_SINT16, 0);
+                // The controller sends INT16_MIN when the temperature sensor is broken
+                String text = raw == Short.MIN_VALUE ? "-- °C" : String.format("%.1f °C", raw / 100.0f);
+                runOnUiThread(() -> grayWaterTempTextView.setText(text));
             } else if (CLEAN_LEVEL_SENSOR_UUID.equals(charUuid)) {
                 int level = characteristic.getIntValue(BluetoothGattCharacteristic.FORMAT_UINT8, 0);
                 runOnUiThread(() -> cleanWaterLevelTextView.setText(level + " %"));

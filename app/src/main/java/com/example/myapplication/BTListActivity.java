@@ -69,9 +69,12 @@ public class BTListActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         recyclerAdapter.setOnItemClickListener(uuid -> {
+            // Hand the choice to the existing MainActivity instead of stacking a new one on top
             Intent intent = new Intent(BTListActivity.this, MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             intent.putExtra("selected_device", uuid);
             startActivity(intent);
+            finish();
         });
     }
 
@@ -236,7 +239,6 @@ public class BTListActivity extends AppCompatActivity {
 
     // Other methods remain the same...
     public void returnMain(View v) {
-        Intent mainIntent = new Intent(this, MainActivity.class);
-        startActivity(mainIntent);
+        finish();
     }
 }
