@@ -1,4 +1,4 @@
-package com.example.myapplication.model;
+package com.example.tank_manager.model;
 
 public class RecyclerModel {
     private String name;

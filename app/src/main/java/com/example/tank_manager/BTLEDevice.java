@@ -1,4 +1,4 @@
-package com.example.myapplication;
+package com.example.tank_manager;
 
 import android.bluetooth.BluetoothDevice;
 import android.annotation.SuppressLint;

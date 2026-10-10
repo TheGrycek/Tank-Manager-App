@@ -1,4 +1,4 @@
-package com.example.myapplication.adapter;
+package com.example.tank_manager.adapter;
 
 import android.content.Context;
 import android.view.LayoutInflater;
@@ -9,8 +9,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.myapplication.R;
-import com.example.myapplication.model.RecyclerModel;
+import com.example.tank_manager.R;
+import com.example.tank_manager.model.RecyclerModel;
 
 import java.util.List;
 

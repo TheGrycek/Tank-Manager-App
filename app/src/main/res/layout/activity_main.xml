@@ -1,44 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#F4EDCF"
+    android:orientation="vertical"
     tools:context=".MainActivity">
 
-
     <LinearLayout
-        android:id="@+id/linearLayout"
-        android:layout_width="408dp"
-        android:layout_height="123dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="60dp"
-        android:layout_marginEnd="8dp"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="8dp"
+        android:layout_marginTop="8dp"
+        android:orientation="vertical">
 
         <TextView
-            android:id="@+id/editTextText2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="false"
-            android:longClickable="false"
-            android:textIsSelectable="false"
+            style="@style/SectionTitle"
             android:background="#E7C55B"
-            android:ems="10"
-            android:fontFamily="monospace"
-            android:inputType="text"
-            android:text="Devices"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:text="@string/devices" />
 
         <LinearLayout
-            android:layout_width="140dp"
+            android:layout_width="match_parent"
             android:layout_height="70dp"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageButton
@@ -46,6 +32,7 @@
                 android:layout_width="70dp"
                 android:layout_height="match_parent"
                 android:background="@drawable/round_corners"
+                android:contentDescription="@string/device_list"
                 android:onClick="openBTList"
                 app:srcCompat="@drawable/bluetooth" />
 
@@ -54,36 +41,25 @@
                 android:layout_width="70dp"
                 android:layout_height="match_parent"
                 android:background="@drawable/round_corners"
+                android:contentDescription="@string/disconnect"
                 android:onClick="breakBTConnection"
-                android:src="@drawable/broken_link" />
+                app:srcCompat="@drawable/broken_link" />
 
+            <TextView
+                android:id="@+id/connection_txt"
+                style="@style/Label"
+                android:layout_marginStart="12dp"
+                android:text="@string/disconnected"
+                android:textColor="#FF0303" />
         </LinearLayout>
-
-        <TextView
-            android:id="@+id/connection_txt"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="false"
-            android:longClickable="false"
-            android:textIsSelectable="false"
-            android:fontFamily="monospace"
-            android:text="DISCONNECTED"
-            android:textColor="#FF0303"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
     </LinearLayout>
 
     <com.google.android.material.tabs.TabLayout
         android:id="@+id/tab_layout"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginEnd="8dp"
-        android:background="#E7C55B"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout">
+        android:layout_marginHorizontal="8dp"
+        android:background="#E7C55B">
 
         <com.google.android.material.tabs.TabItem
             android:layout_width="wrap_content"
@@ -96,341 +72,189 @@
             android:text="@string/tab_settings" />
     </com.google.android.material.tabs.TabLayout>
 
-    <androidx.constraintlayout.widget.Group
-        android:id="@+id/status_group"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        app:constraint_referenced_ids="linearLayout2,linearLayout3,linearLayout4" />
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
 
-    <LinearLayout
-        android:id="@+id/settings_layout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"
-        android:orientation="vertical"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tab_layout">
-
-        <TextView
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#F0D06B"
-            android:fontFamily="monospace"
-            android:text="@string/settings_gray_tank"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Switch
-            android:id="@+id/buzzer_switch"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:fontFamily="monospace"
-            android:text="@string/settings_buzzer"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/gray_threshold_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="monospace"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <SeekBar
-            android:id="@+id/gray_threshold_seek"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:max="10" />
-
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:background="#F0D06B"
-            android:fontFamily="monospace"
-            android:text="@string/settings_heating"
-            android:textSize="20sp"
-            android:textStyle="bold" />
-
-        <Switch
-            android:id="@+id/auto_heating_switch"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:fontFamily="monospace"
-            android:text="@string/settings_auto_heating"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/heating_threshold_label"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="monospace"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-        <SeekBar
-            android:id="@+id/heating_threshold_seek"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:max="4" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/linearLayout2"
-        android:layout_width="408dp"
-        android:layout_height="214dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/tab_layout">
-
-        <LinearLayout
-            android:layout_width="399dp"
-            android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <TextView
-                android:id="@+id/editTextText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:focusable="false"
-                android:longClickable="false"
-                android:textIsSelectable="false"
-                android:background="#F0D06B"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="text"
-                android:text="Gray water tank"
-                android:textSize="20sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/editTextText3"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:focusable="false"
-                android:longClickable="false"
-                android:textIsSelectable="false"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="text"
-                android:text="Water level"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/gray_water_lvl_txt"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="0 %"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/editTextText5"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:focusable="false"
-                android:longClickable="false"
-                android:textIsSelectable="false"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="text"
-                android:text="Water temperature"
-                android:textSize="16sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:id="@+id/gray_water_lvl_temp"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="0 °C"
-                android:textStyle="bold" />
-
-        </LinearLayout>
-
-        <Switch
-            android:id="@+id/open_valve_switch"
-            android:layout_width="match_parent"
-            android:layout_height="43dp"
-            android:ems="10"
-            android:focusable="false"
-            android:fontFamily="monospace"
-            android:longClickable="false"
-            android:onClick="openValve"
-            android:showText="true"
-            android:text="Open valve"
-            android:textIsSelectable="false"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:trackTint="#FF0000" />
-
-        <Switch
-            android:id="@+id/heate_on_light"
-            android:layout_width="match_parent"
-            android:layout_height="43dp"
-            android:ems="10"
-            android:focusable="false"
-            android:fontFamily="monospace"
-            android:longClickable="false"
-            android:showText="true"
-            android:clickable="false"
-            android:text="Heater"
-            android:textIsSelectable="false"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:trackTint="#FF0000" />
-    </LinearLayout>
-
-    <LinearLayout
-        android:id="@+id/linearLayout3"
-        android:layout_width="410dp"
-        android:layout_height="122dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout2">
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_marginTop="4dp"
-            android:orientation="vertical"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHorizontal_bias="0.0"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/linearLayout2">
+            android:paddingHorizontal="8dp"
+            android:paddingBottom="16dp">
 
             <LinearLayout
-                android:layout_width="399dp"
+                android:id="@+id/status_group"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
                 <TextView
-                    android:id="@+id/editTextText1"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:focusable="false"
-                    android:longClickable="false"
-                    android:textIsSelectable="false"
-                    android:background="#EFCF6A"
-                    android:ems="10"
-                    android:fontFamily="monospace"
-                    android:inputType="text"
-                    android:text="Clean water tank"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/gray_water_tank" />
 
                 <TextView
-                    android:id="@+id/editTextText4"
+                    style="@style/Label"
+                    android:text="@string/water_level" />
+
+                <TextView
+                    android:id="@+id/gray_water_lvl_txt"
+                    style="@style/Value"
+                    android:text="@string/no_value" />
+
+                <TextView
+                    style="@style/Label"
+                    android:text="@string/water_temperature" />
+
+                <TextView
+                    android:id="@+id/gray_water_lvl_temp"
+                    style="@style/Value"
+                    android:text="@string/no_value" />
+
+                <Switch
+                    android:id="@+id/open_valve_switch"
+                    style="@style/Label"
+                    android:layout_height="48dp"
+                    android:text="@string/open_valve"
+                    android:trackTint="#FF0000" />
+
+                <Switch
+                    android:id="@+id/heate_on_light"
+                    style="@style/Label"
+                    android:layout_height="48dp"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:text="@string/heater"
+                    android:trackTint="#FF0000" />
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/clean_water_tank" />
+
+                <TextView
+                    style="@style/Label"
+                    android:text="@string/water_level" />
+
+                <TextView
+                    android:id="@+id/clean_water_lvl_txt"
+                    style="@style/Value"
+                    android:text="@string/no_value" />
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/position" />
+
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:focusable="false"
-                    android:longClickable="false"
-                    android:textIsSelectable="false"
-                    android:ems="10"
-                    android:fontFamily="monospace"
-                    android:inputType="text"
-                    android:text="Water level"
-                    android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:baselineAligned="false"
+                    android:orientation="horizontal">
 
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Label"
+                            android:text="@string/pitch" />
+
+                        <TextView
+                            android:id="@+id/pitch_num"
+                            style="@style/Value"
+                            android:text="@string/no_value" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Label"
+                            android:text="@string/roll" />
+
+                        <TextView
+                            android:id="@+id/roll_num"
+                            style="@style/Value"
+                            android:text="@string/no_value" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            style="@style/Label"
+                            android:text="@string/yaw" />
+
+                        <TextView
+                            android:id="@+id/yaw_num"
+                            style="@style/Value"
+                            android:text="@string/no_value" />
+                    </LinearLayout>
+                </LinearLayout>
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/clean_water_lvl_txt"
+            <LinearLayout
+                android:id="@+id/settings_layout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="monospace"
-                android:text="0 %" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:visibility="gone">
 
-    </LinearLayout>
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/settings_gray_tank" />
 
-    <LinearLayout
-        android:id="@+id/linearLayout4"
-        android:layout_width="405dp"
-        android:layout_height="88dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="16dp"
-        android:layout_marginEnd="8dp"
-        android:orientation="vertical"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/linearLayout3">
+                <Switch
+                    android:id="@+id/buzzer_switch"
+                    style="@style/Label"
+                    android:layout_height="48dp"
+                    android:text="@string/settings_buzzer" />
 
-        <TextView
-            android:id="@+id/editTextText6"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:focusable="false"
-            android:longClickable="false"
-            android:textIsSelectable="false"
-            android:background="#F0D06A"
-            android:ems="10"
-            android:fontFamily="monospace"
-            android:inputType="text"
-            android:text="Position"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/gray_threshold_label"
+                    style="@style/Label"
+                    android:layout_marginTop="8dp" />
 
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="horizontal">
+                <SeekBar
+                    android:id="@+id/gray_threshold_seek"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:max="10" />
 
-            <TextView
-                android:id="@+id/pitch_num"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="number"
-                android:text="0°"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/settings_heating" />
 
-            <TextView
-                android:id="@+id/roll_num"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="number"
-                android:text="0°"
-                android:textSize="14sp"
-                android:textStyle="bold" />
+                <Switch
+                    android:id="@+id/auto_heating_switch"
+                    style="@style/Label"
+                    android:layout_height="48dp"
+                    android:text="@string/settings_auto_heating" />
 
-            <TextView
-                android:id="@+id/yaw_num"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:ems="10"
-                android:fontFamily="monospace"
-                android:inputType="number"
-                android:text="0°"
-                android:textSize="14sp"
-                android:textStyle="bold" />
-        </LinearLayout>
+                <TextView
+                    android:id="@+id/heating_threshold_label"
+                    style="@style/Label"
+                    android:layout_marginTop="8dp" />
 
-    </LinearLayout>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+                <SeekBar
+                    android:id="@+id/heating_threshold_seek"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:max="4" />
+            </LinearLayout>
+        </FrameLayout>
+    </ScrollView>
+</LinearLayout>

@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.myapplication"
+    namespace = "com.example.tank_manager"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.myapplication"
+        applicationId = "com.example.tank_manager"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
