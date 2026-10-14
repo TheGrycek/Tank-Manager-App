@@ -69,6 +69,7 @@ public class TankService extends Service {
     private static final String CHANNEL_ID = "connection";
     private static final int NOTIFICATION_ID = 1;
     private static final long RECONNECT_DELAY_MS = 3000;
+    private static final long DISCOVERY_DELAY_MS = 500;
     private static final String ACTION_DISCONNECT = "com.example.tank_manager.DISCONNECT";
 
     private final IBinder binder = new LocalBinder();
@@ -347,6 +348,15 @@ public class TankService extends Service {
 
     // ------------------------------------------------------------------ GATT
 
+    /** Drops Android's cached attribute table of the device (hidden API, so called by reflection). */
+    private static void refreshCache(BluetoothGatt gatt) {
+        try {
+            gatt.getClass().getMethod("refresh").invoke(gatt);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            Log.w(TAG, "Could not clear the GATT cache", e);
+        }
+    }
+
     /**
      * Callback for GATT events (binder thread). State changes are posted to the main thread.
      */
@@ -366,8 +376,17 @@ public class TankService extends Service {
                     if (gatt == bluetoothGatt) setState(State.CONNECTED);
                 });
                 if (hasConnectPermission()) {
-                    Log.i(TAG, "Attempting to start service discovery.");
-                    gatt.discoverServices();
+                    // Android keeps the attribute table of a bonded device and the controller never
+                    // reports that it changed, so after a firmware update the cached handles would
+                    // deliver values under the wrong characteristics. Always discover it anew.
+                    refreshCache(gatt);
+                    // The cache is cleared asynchronously: give it a moment before discovering
+                    handler.postDelayed(() -> {
+                        if (gatt == bluetoothGatt && hasConnectPermission()) {
+                            Log.i(TAG, "Attempting to start service discovery.");
+                            gatt.discoverServices();
+                        }
+                    }, DISCOVERY_DELAY_MS);
                 }
             } else {
                 // Disconnected, or the connection attempt failed (status != GATT_SUCCESS).
