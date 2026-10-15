@@ -13,10 +13,17 @@ final class Protocol {
     static final UUID GRAY_TEMP_UUID = UUID.fromString("00000000-0000-0000-0000-000000000003");
     static final UUID MPU_UUID = UUID.fromString("00000000-0000-0000-0000-000000000004");
     static final UUID VALVE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000005");
+    // Actual valve state including the movement, see VALVE_* below
+    static final UUID VALVE_STATE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000006");
     static final UUID HEATER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000007");
     static final UUID SETTINGS_UUID = UUID.fromString("00000000-0000-0000-0000-000000000008");
     // Standard BLE descriptor for notifications
     static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
+
+    static final int VALVE_CLOSED = 0;
+    static final int VALVE_OPEN = 1;
+    static final int VALVE_CLOSING = 2;
+    static final int VALVE_OPENING = 3;
 
     private Protocol() { }
 

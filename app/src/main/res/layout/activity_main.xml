@@ -21,29 +21,36 @@
             android:background="#E7C55B"
             android:text="@string/devices" />
 
+        <!-- Buttons are as large as the logo, with space above, below and between them -->
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="70dp"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <ImageButton
                 android:id="@+id/bluetootl_list_btn"
-                android:layout_width="70dp"
-                android:layout_height="match_parent"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
                 android:background="@drawable/round_corners"
                 android:contentDescription="@string/device_list"
                 android:onClick="openBTList"
-                app:srcCompat="@drawable/bluetooth" />
+                android:padding="6dp"
+                android:scaleType="fitCenter"
+                app:srcCompat="@drawable/ic_devices" />
 
             <ImageButton
                 android:id="@+id/break_connection_btn"
-                android:layout_width="70dp"
-                android:layout_height="match_parent"
+                android:layout_width="56dp"
+                android:layout_height="56dp"
+                android:layout_marginStart="12dp"
                 android:background="@drawable/round_corners"
+                android:padding="6dp"
+                android:scaleType="fitCenter"
                 android:contentDescription="@string/disconnect"
                 android:onClick="breakBTConnection"
-                app:srcCompat="@drawable/broken_link" />
+                app:srcCompat="@drawable/ic_disconnect" />
 
             <TextView
                 android:id="@+id/connection_txt"
@@ -58,7 +65,7 @@
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:contentDescription="@string/app_name"
-                app:srcCompat="@drawable/water_level" />
+                app:srcCompat="@drawable/ic_logo" />
         </LinearLayout>
     </LinearLayout>
 
@@ -105,6 +112,7 @@
 
                 <TextView
                     style="@style/Label"
+                    android:layout_marginTop="12dp"
                     android:text="@string/water_level" />
 
                 <TextView
@@ -121,12 +129,35 @@
                     style="@style/Value"
                     android:text="@string/no_value" />
 
-                <Switch
-                    android:id="@+id/open_valve_switch"
-                    style="@style/Label"
+                <!-- Label, actual valve state, then the switch on the same row -->
+                <LinearLayout
+                    android:layout_width="match_parent"
                     android:layout_height="48dp"
-                    android:text="@string/open_valve"
-                    android:trackTint="#FF0000" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="wrap_content"
+                        android:labelFor="@id/open_valve_switch"
+                        android:text="@string/open_valve" />
+
+                    <TextView
+                        android:id="@+id/valve_state_txt"
+                        style="@style/Value"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:layout_marginHorizontal="8dp"
+                        android:gravity="end"
+                        android:text="@string/no_value" />
+
+                    <Switch
+                        android:id="@+id/open_valve_switch"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:contentDescription="@string/open_valve"
+                        android:trackTint="#FF0000" />
+                </LinearLayout>
 
                 <Switch
                     android:id="@+id/heate_on_light"
@@ -144,6 +175,7 @@
 
                 <TextView
                     style="@style/Label"
+                    android:layout_marginTop="12dp"
                     android:text="@string/water_level" />
 
                 <TextView
@@ -159,6 +191,7 @@
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
                     android:baselineAligned="false"
                     android:orientation="horizontal">
 

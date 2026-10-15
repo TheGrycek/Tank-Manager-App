@@ -17,6 +17,10 @@
     <string name="water_level">Water level</string>
     <string name="water_temperature">Water temperature</string>
     <string name="open_valve">Open valve</string>
+    <string name="valve_closed">Closed</string>
+    <string name="valve_open">Open</string>
+    <string name="valve_closing">Closing…</string>
+    <string name="valve_opening">Opening…</string>
     <string name="heater">Heater</string>
     <string name="position">Position</string>
     <string name="pitch">Pitch</string>

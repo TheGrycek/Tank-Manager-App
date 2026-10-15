@@ -1,6 +1,8 @@
 package com.example.tank_manager;
 
 import android.Manifest;
+import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Intent;
@@ -65,6 +67,10 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     // --- UI Elements ---
     private TextView connectionText;
     private Switch valveSwitch;
+    // Actual valve state (closed / opening / open / closing), pulsing while the valve moves
+    private TextView valveStateTextView;
+    private ColorStateList valveStateDefaultColor;
+    private ObjectAnimator valveStatePulse;
     private Switch heaterSwitch;
     private TextView grayWaterLevelTextView;
     private TextView grayWaterTempTextView;
@@ -105,6 +111,12 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
 
         connectionText = findViewById(R.id.connection_txt);
         valveSwitch = findViewById(R.id.open_valve_switch);
+        valveStateTextView = findViewById(R.id.valve_state_txt);
+        valveStateDefaultColor = valveStateTextView.getTextColors();
+        valveStatePulse = ObjectAnimator.ofFloat(valveStateTextView, View.ALPHA, 1f, 0.3f);
+        valveStatePulse.setDuration(600);
+        valveStatePulse.setRepeatMode(ValueAnimator.REVERSE);
+        valveStatePulse.setRepeatCount(ValueAnimator.INFINITE);
         heaterSwitch = findViewById(R.id.heate_on_light);
         grayWaterLevelTextView = findViewById(R.id.gray_water_lvl_txt);
         grayWaterTempTextView = findViewById(R.id.gray_water_lvl_temp);
@@ -292,6 +304,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        stopValveStatePulse();
         // The session, if any, goes on in the service
         if (service != null) {
             service.setListener(null);
@@ -385,6 +398,46 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         valveSwitch.setTrackTintList(ColorStateList.valueOf(open ? COLOR_ON : COLOR_OFF));
     }
 
+    private void showValveState(int state) {
+        int text;
+        int color;
+        boolean moving = false;
+        switch (state) {
+            case Protocol.VALVE_OPEN:
+                text = R.string.valve_open;
+                color = COLOR_ON;
+                break;
+            case Protocol.VALVE_CLOSING:
+                text = R.string.valve_closing;
+                color = COLOR_PENDING;
+                moving = true;
+                break;
+            case Protocol.VALVE_OPENING:
+                text = R.string.valve_opening;
+                color = COLOR_PENDING;
+                moving = true;
+                break;
+            case Protocol.VALVE_CLOSED:
+                text = R.string.valve_closed;
+                color = COLOR_OFF;
+                break;
+            default:
+                return;
+        }
+        valveStateTextView.setText(text);
+        valveStateTextView.setTextColor(color);
+        if (!moving) {
+            stopValveStatePulse();
+        } else if (!valveStatePulse.isStarted()) {
+            valveStatePulse.start();
+        }
+    }
+
+    private void stopValveStatePulse() {
+        valveStatePulse.cancel();
+        valveStateTextView.setAlpha(1f);
+    }
+
     private void showHeater(boolean on) {
         heaterSwitch.setChecked(on);
         heaterSwitch.setTrackTintList(ColorStateList.valueOf(on ? COLOR_ON : COLOR_OFF));
@@ -419,8 +472,10 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         connectionText.setTextColor(statusColor);
         showValve(false);
         showHeater(false);
+        stopValveStatePulse();
+        valveStateTextView.setTextColor(valveStateDefaultColor);
         for (TextView view : new TextView[]{grayWaterLevelTextView, grayWaterTempTextView,
-                cleanWaterLevelTextView, pitchTextView, rollTextView, yawTextView}) {
+                cleanWaterLevelTextView, pitchTextView, rollTextView, yawTextView, valveStateTextView}) {
             view.setText(R.string.no_value);
         }
         refreshControls();
@@ -459,6 +514,8 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
                 showValve(confirmedValve);
                 refreshControls();
             }
+        } else if (Protocol.VALVE_STATE_UUID.equals(charUuid)) {
+            if (number != null) showValveState(number);
         } else if (Protocol.HEATER_UUID.equals(charUuid)) {
             if (number != null) showHeater(number == 1);
         } else if (Protocol.SETTINGS_UUID.equals(charUuid)) {

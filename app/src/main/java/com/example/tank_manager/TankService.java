@@ -415,6 +415,7 @@ public class TankService extends Service {
                     notificationQueue.add(service.getCharacteristic(Protocol.CLEAN_LEVEL_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.MPU_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.VALVE_UUID));
+                    notificationQueue.add(service.getCharacteristic(Protocol.VALVE_STATE_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.HEATER_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.SETTINGS_UUID));
                     // Start the process
