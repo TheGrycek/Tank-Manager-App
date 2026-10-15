@@ -203,11 +203,20 @@
 
                         <TextView
                             style="@style/Label"
+                            android:gravity="center"
                             android:text="@string/pitch" />
+
+                        <com.example.tank_manager.TiltView
+                            android:id="@+id/pitch_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="4dp"
+                            app:tiltMode="pitch" />
 
                         <TextView
                             android:id="@+id/pitch_num"
                             style="@style/Value"
+                            android:gravity="center"
                             android:text="@string/no_value" />
                     </LinearLayout>
 
@@ -219,11 +228,20 @@
 
                         <TextView
                             style="@style/Label"
+                            android:gravity="center"
                             android:text="@string/roll" />
+
+                        <com.example.tank_manager.TiltView
+                            android:id="@+id/roll_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="4dp"
+                            app:tiltMode="roll" />
 
                         <TextView
                             android:id="@+id/roll_num"
                             style="@style/Value"
+                            android:gravity="center"
                             android:text="@string/no_value" />
                     </LinearLayout>
 
@@ -235,11 +253,20 @@
 
                         <TextView
                             style="@style/Label"
-                            android:text="@string/yaw" />
+                            android:gravity="center"
+                            android:text="@string/heading" />
+
+                        <com.example.tank_manager.TiltView
+                            android:id="@+id/heading_view"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginHorizontal="4dp"
+                            app:tiltMode="heading" />
 
                         <TextView
                             android:id="@+id/yaw_num"
                             style="@style/Value"
+                            android:gravity="center"
                             android:text="@string/no_value" />
                     </LinearLayout>
                 </LinearLayout>

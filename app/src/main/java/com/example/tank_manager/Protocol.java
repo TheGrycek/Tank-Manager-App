@@ -42,7 +42,10 @@ final class Protocol {
         return raw == Short.MIN_VALUE ? null : raw / 100.0f;
     }
 
-    /** Pitch, roll and yaw in degrees, or null when the payload is short. */
+    /**
+     * Pitch (front up > 0), roll (right side down > 0) and heading of the front (0-360, clockwise
+     * from magnetic north) in degrees, or null when the payload is short.
+     */
     static float[] orientation(byte[] value) {
         if (value == null || value.length < 12) {
             return null;
@@ -51,7 +54,15 @@ final class Protocol {
         return new float[]{buffer.getFloat(), buffer.getFloat(), buffer.getFloat()};
     }
 
-    /** The four user settings; ranges are the same as in the controller firmware. */
+    private static final String[] COMPASS_POINTS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};
+
+    /** Nearest of the eight compass points for a heading in degrees clockwise from north. */
+    static String compassPoint(float heading) {
+        int index = Math.round(((heading % 360f) + 360f) % 360f / 45f) % 8;
+        return COMPASS_POINTS[index];
+    }
+
+        /** The four user settings; ranges are the same as in the controller firmware. */
     static final class Settings {
         static final int GRAY_THRESHOLD_MIN = 50;
         static final int GRAY_THRESHOLD_MAX = 100;

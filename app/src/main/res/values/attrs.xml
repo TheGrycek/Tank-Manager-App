@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="TiltView">
+        <!-- What the view shows: the camper from the side, from behind or on a compass -->
+        <attr name="tiltMode" format="enum">
+            <enum name="pitch" value="0" />
+            <enum name="roll" value="1" />
+            <enum name="heading" value="2" />
+        </attr>
+    </declare-styleable>
+</resources>

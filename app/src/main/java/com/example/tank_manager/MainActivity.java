@@ -69,7 +69,8 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     private Switch valveSwitch;
     // Actual valve state (closed / opening / open / closing), pulsing while the valve moves
     private TextView valveStateTextView;
-    private ColorStateList valveStateDefaultColor;
+    // Text colour of the Value style, for values that are coloured while shown
+    private ColorStateList valueDefaultColor;
     private ObjectAnimator valveStatePulse;
     private Switch heaterSwitch;
     private TextView grayWaterLevelTextView;
@@ -77,7 +78,10 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     private TextView cleanWaterLevelTextView;
     private TextView pitchTextView;
     private TextView rollTextView;
-    private TextView yawTextView;
+    private TextView headingTextView;
+    private TiltView pitchView;
+    private TiltView rollView;
+    private TiltView headingView;
 
     // --- Settings tab ---
     private View statusGroup;
@@ -112,7 +116,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         connectionText = findViewById(R.id.connection_txt);
         valveSwitch = findViewById(R.id.open_valve_switch);
         valveStateTextView = findViewById(R.id.valve_state_txt);
-        valveStateDefaultColor = valveStateTextView.getTextColors();
+        valueDefaultColor = valveStateTextView.getTextColors();
         valveStatePulse = ObjectAnimator.ofFloat(valveStateTextView, View.ALPHA, 1f, 0.3f);
         valveStatePulse.setDuration(600);
         valveStatePulse.setRepeatMode(ValueAnimator.REVERSE);
@@ -123,7 +127,10 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         cleanWaterLevelTextView = findViewById(R.id.clean_water_lvl_txt);
         pitchTextView = findViewById(R.id.pitch_num);
         rollTextView = findViewById(R.id.roll_num);
-        yawTextView = findViewById(R.id.yaw_num);
+        headingTextView = findViewById(R.id.yaw_num);
+        pitchView = findViewById(R.id.pitch_view);
+        rollView = findViewById(R.id.roll_view);
+        headingView = findViewById(R.id.heading_view);
 
         // A listener instead of onClick: the switch can also be changed by dragging its thumb
         valveSwitch.setOnCheckedChangeListener((button, checked) -> {
@@ -398,6 +405,23 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         valveSwitch.setTrackTintList(ColorStateList.valueOf(open ? COLOR_ON : COLOR_OFF));
     }
 
+    /** Pitch (front up > 0), roll (right side down > 0) and heading (clockwise from north). */
+    private void showAttitude(float pitch, float roll, float heading) {
+        pitchTextView.setText(getString(R.string.angle_value, pitch));
+        pitchTextView.setTextColor(TiltView.levelColor(pitch));
+        pitchView.setAngle(pitch);
+        pitchView.setContentDescription(getString(R.string.pitch_description, pitch));
+
+        rollTextView.setText(getString(R.string.angle_value, roll));
+        rollTextView.setTextColor(TiltView.levelColor(roll));
+        rollView.setAngle(roll);
+        rollView.setContentDescription(getString(R.string.roll_description, roll));
+
+        headingTextView.setText(getString(R.string.heading_value, heading, Protocol.compassPoint(heading)));
+        headingView.setAngle(heading);
+        headingView.setContentDescription(getString(R.string.heading_description, heading));
+    }
+
     private void showValveState(int state) {
         int text;
         int color;
@@ -473,9 +497,15 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         showValve(false);
         showHeater(false);
         stopValveStatePulse();
-        valveStateTextView.setTextColor(valveStateDefaultColor);
+        for (TextView view : new TextView[]{valveStateTextView, pitchTextView, rollTextView}) {
+            view.setTextColor(valueDefaultColor);
+        }
+        for (TiltView view : new TiltView[]{pitchView, rollView, headingView}) {
+            view.setAngle(null);
+            view.setContentDescription(null);
+        }
         for (TextView view : new TextView[]{grayWaterLevelTextView, grayWaterTempTextView,
-                cleanWaterLevelTextView, pitchTextView, rollTextView, yawTextView, valveStateTextView}) {
+                cleanWaterLevelTextView, pitchTextView, rollTextView, headingTextView, valveStateTextView}) {
             view.setText(R.string.no_value);
         }
         refreshControls();
@@ -503,9 +533,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         } else if (Protocol.MPU_UUID.equals(charUuid)) {
             float[] angles = Protocol.orientation(value);
             if (angles != null) {
-                pitchTextView.setText(getString(R.string.angle_value, angles[0]));
-                rollTextView.setText(getString(R.string.angle_value, angles[1]));
-                yawTextView.setText(getString(R.string.angle_value, angles[2]));
+                showAttitude(angles[0], angles[1], angles[2]);
             }
         } else if (Protocol.VALVE_UUID.equals(charUuid)) {
             // While a command is waiting for its acknowledgement, a periodic value may still be the old one

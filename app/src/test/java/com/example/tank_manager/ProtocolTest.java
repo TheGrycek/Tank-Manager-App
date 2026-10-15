@@ -57,4 +57,15 @@ public class ProtocolTest {
         assertEquals(1, s.heatingThreshold);
         assertNull(Protocol.Settings.decode(new byte[]{1, 90, 1}));
     }
+
+    @Test
+    public void compassPointIsNearestOfEight() {
+        assertEquals("N", Protocol.compassPoint(0f));
+        assertEquals("N", Protocol.compassPoint(359f));
+        assertEquals("N", Protocol.compassPoint(22f));
+        assertEquals("NE", Protocol.compassPoint(23f));
+        assertEquals("E", Protocol.compassPoint(90f));
+        assertEquals("SW", Protocol.compassPoint(225f));
+        assertEquals("NW", Protocol.compassPoint(-45f));
+    }
 }
