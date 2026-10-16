@@ -160,26 +160,6 @@
                         android:text="@string/no_value" />
                 </LinearLayout>
 
-                <LinearLayout
-                    android:layout_marginHorizontal="12dp"
-                    android:layout_width="match_parent"
-                    android:layout_height="48dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        style="@style/Label"
-                        android:layout_width="0dp"
-                        android:layout_weight="1"
-                        android:text="@string/temperature" />
-
-                    <TextView
-                        android:id="@+id/gray_water_lvl_temp"
-                        style="@style/Value"
-                        android:layout_width="wrap_content"
-                        android:text="@string/no_value" />
-                </LinearLayout>
-
                 <!-- Label, actual valve state, then the switch on the same row; the switch draws its track
                      12 dp inside its bounds, the negative margin puts the track flush with the values -->
                 <LinearLayout
@@ -211,6 +191,26 @@
                         android:layout_marginEnd="-12dp"
                         android:contentDescription="@string/valve"
                         android:trackTint="#FF0000" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/temperature" />
+
+                    <TextView
+                        android:id="@+id/gray_water_lvl_temp"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
                 </LinearLayout>
 
                 <!-- Heater: an indicator light, green when on, red when off, grey without a value -->
@@ -406,6 +406,18 @@
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
                     android:max="4" />
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/settings_clean_filling" />
+
+                <Switch
+                    android:layout_marginHorizontal="12dp"
+                    android:id="@+id/fill_mode_switch"
+                    style="@style/Label"
+                    android:layout_height="48dp"
+                    android:text="@string/settings_fill_mode" />
             </LinearLayout>
         </FrameLayout>
     </ScrollView>

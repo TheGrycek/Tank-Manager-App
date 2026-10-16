@@ -45,6 +45,8 @@
     <string name="settings_heating">Heating</string>
     <string name="settings_auto_heating">Auto-heating</string>
     <string name="settings_heating_threshold">Heating threshold: %1$d °C</string>
+    <string name="settings_clean_filling">Clean tank filling</string>
+    <string name="settings_fill_mode">Fill mode</string>
     <string name="scanning">Scanning for the tank controller…</string>
     <string name="enable_bluetooth">Please enable Bluetooth and try again.</string>
     <string name="scan_permissions_required">Permissions are required to scan for Bluetooth devices.</string>

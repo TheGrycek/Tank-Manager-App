@@ -42,12 +42,20 @@ public class ProtocolTest {
 
     @Test
     public void settings_roundTrip() {
-        Protocol.Settings s = Protocol.Settings.decode(new byte[]{1, 85, 0, 3});
+        Protocol.Settings s = Protocol.Settings.decode(new byte[]{1, 85, 0, 3, 1});
         assertTrue(s.buzzerOn);
         assertEquals(85, s.grayThreshold);
         assertFalse(s.autoHeating);
         assertEquals(3, s.heatingThreshold);
-        assertArrayEquals(new byte[]{1, 85, 0, 3}, s.encode());
+        assertTrue(s.fillMode);
+        assertArrayEquals(new byte[]{1, 85, 0, 3, 1}, s.encode());
+    }
+
+    @Test
+    public void settings_fourBytesFromOlderFirmwareMeanFillModeOff() {
+        Protocol.Settings s = Protocol.Settings.decode(new byte[]{1, 85, 0, 3});
+        assertFalse(s.fillMode);
+        assertArrayEquals(new byte[]{1, 85, 0, 3, 0}, s.encode());
     }
 
     @Test

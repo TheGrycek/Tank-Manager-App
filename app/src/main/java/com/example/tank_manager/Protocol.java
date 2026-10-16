@@ -62,7 +62,10 @@ final class Protocol {
         return COMPASS_POINTS[index];
     }
 
-        /** The four user settings; ranges are the same as in the controller firmware. */
+    /**
+     * The user settings; ranges are the same as in the controller firmware. The fifth byte, the clean
+     * tank fill mode, is not stored by the controller; an older controller sends only four bytes.
+     */
     static final class Settings {
         static final int GRAY_THRESHOLD_MIN = 50;
         static final int GRAY_THRESHOLD_MAX = 100;
@@ -74,19 +77,23 @@ final class Protocol {
         final int grayThreshold;
         final boolean autoHeating;
         final int heatingThreshold;
+        final boolean fillMode;
 
-        Settings(boolean buzzerOn, int grayThreshold, boolean autoHeating, int heatingThreshold) {
+        Settings(boolean buzzerOn, int grayThreshold, boolean autoHeating, int heatingThreshold,
+                 boolean fillMode) {
             this.buzzerOn = buzzerOn;
             this.grayThreshold = clamp(grayThreshold, GRAY_THRESHOLD_MIN, GRAY_THRESHOLD_MAX);
             this.autoHeating = autoHeating;
             this.heatingThreshold = clamp(heatingThreshold, HEATING_THRESHOLD_MIN, HEATING_THRESHOLD_MAX);
+            this.fillMode = fillMode;
         }
 
         static Settings decode(byte[] value) {
             if (value == null || value.length < 4) {
                 return null;
             }
-            return new Settings(value[0] != 0, value[1] & 0xFF, value[2] != 0, value[3] & 0xFF);
+            return new Settings(value[0] != 0, value[1] & 0xFF, value[2] != 0, value[3] & 0xFF,
+                    value.length > 4 && value[4] != 0);
         }
 
         byte[] encode() {
@@ -94,7 +101,8 @@ final class Protocol {
                     (byte) (buzzerOn ? 1 : 0),
                     (byte) grayThreshold,
                     (byte) (autoHeating ? 1 : 0),
-                    (byte) heatingThreshold
+                    (byte) heatingThreshold,
+                    (byte) (fillMode ? 1 : 0)
             };
         }
 

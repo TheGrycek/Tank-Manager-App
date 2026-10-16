@@ -94,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     private View settingsLayout;
     private Switch buzzerSwitch;
     private Switch autoHeatingSwitch;
+    private Switch fillModeSwitch;
     private SeekBar grayThresholdSeek;
     private SeekBar heatingThresholdSeek;
     private TextView grayThresholdLabel;
@@ -163,6 +164,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         settingsLayout = findViewById(R.id.settings_layout);
         buzzerSwitch = findViewById(R.id.buzzer_switch);
         autoHeatingSwitch = findViewById(R.id.auto_heating_switch);
+        fillModeSwitch = findViewById(R.id.fill_mode_switch);
         grayThresholdSeek = findViewById(R.id.gray_threshold_seek);
         heatingThresholdSeek = findViewById(R.id.heating_threshold_seek);
         grayThresholdLabel = findViewById(R.id.gray_threshold_label);
@@ -186,6 +188,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
 
         buzzerSwitch.setOnCheckedChangeListener((button, checked) -> sendSettings());
         autoHeatingSwitch.setOnCheckedChangeListener((button, checked) -> sendSettings());
+        fillModeSwitch.setOnCheckedChangeListener((button, checked) -> sendSettings());
         SeekBar.OnSeekBarChangeListener seekListener = new SeekBar.OnSeekBarChangeListener() {
             @Override
             public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
@@ -212,7 +215,8 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
                 Protocol.Settings.GRAY_THRESHOLD_MIN
                         + grayThresholdSeek.getProgress() * Protocol.Settings.GRAY_THRESHOLD_STEP,
                 autoHeatingSwitch.isChecked(),
-                Protocol.Settings.HEATING_THRESHOLD_MIN + heatingThresholdSeek.getProgress());
+                Protocol.Settings.HEATING_THRESHOLD_MIN + heatingThresholdSeek.getProgress(),
+                fillModeSwitch.isChecked());
     }
 
     private void updateSettingsLabels() {
@@ -221,7 +225,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         heatingThresholdLabel.setText(getString(R.string.settings_heating_threshold, settings.heatingThreshold));
     }
 
-    /** Sends all four settings; the controller answers with the values it accepted. */
+    /** Sends all settings; the controller answers with the values it accepted. */
     private void sendSettings() {
         if (applyingSettings) {
             return;
@@ -238,6 +242,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
                 / Protocol.Settings.GRAY_THRESHOLD_STEP);
         autoHeatingSwitch.setChecked(settings.autoHeating);
         heatingThresholdSeek.setProgress(settings.heatingThreshold - Protocol.Settings.HEATING_THRESHOLD_MIN);
+        fillModeSwitch.setChecked(settings.fillMode);
         updateSettingsLabels();
         applyingSettings = false;
     }
@@ -489,6 +494,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         boolean settingsEnabled = connected && ready && settingsKnown;
         buzzerSwitch.setEnabled(settingsEnabled);
         autoHeatingSwitch.setEnabled(settingsEnabled);
+        fillModeSwitch.setEnabled(settingsEnabled);
         grayThresholdSeek.setEnabled(settingsEnabled);
         heatingThresholdSeek.setEnabled(settingsEnabled);
     }
