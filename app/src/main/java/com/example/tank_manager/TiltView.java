@@ -271,7 +271,7 @@ public class TiltView extends View {
             canvas.drawLine(0f, -44f, 0f, -40f, stroke);
             canvas.restore();
         }
-        text.setTextSize(11f);
+        text.setTextSize(12f);
         String[] names = {"N", "E", "S", "W"};
         for (int i = 0; i < 4; i++) {
             double a = Math.toRadians(i * 90);

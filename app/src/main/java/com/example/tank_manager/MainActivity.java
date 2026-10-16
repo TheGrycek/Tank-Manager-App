@@ -10,6 +10,7 @@ import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -42,6 +43,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
 
     private static final int COLOR_ON = Color.rgb(0, 150, 0);
     private static final int COLOR_OFF = Color.RED;
+    private static final int COLOR_UNKNOWN = Color.GRAY;
     private static final int COLOR_PENDING = Color.parseColor("#E87823");
 
     // The connection lives in TankService; null until the service is bound
@@ -66,13 +68,17 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
 
     // --- UI Elements ---
     private TextView connectionText;
+    private View connectionPill;
+    private View connectionLight;
+    private ObjectAnimator connectionPulse;
     private Switch valveSwitch;
     // Actual valve state (closed / opening / open / closing), pulsing while the valve moves
     private TextView valveStateTextView;
     // Text colour of the Value style, for values that are coloured while shown
     private ColorStateList valueDefaultColor;
     private ObjectAnimator valveStatePulse;
-    private Switch heaterSwitch;
+    private View heaterLight;
+    private Boolean heaterOn = null;
     private TextView grayWaterLevelTextView;
     private TextView grayWaterTempTextView;
     private TextView cleanWaterLevelTextView;
@@ -114,6 +120,12 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         }
 
         connectionText = findViewById(R.id.connection_txt);
+        connectionPill = findViewById(R.id.connection_pill);
+        connectionLight = findViewById(R.id.connection_light);
+        connectionPulse = ObjectAnimator.ofFloat(connectionLight, View.ALPHA, 1f, 0.2f);
+        connectionPulse.setDuration(600);
+        connectionPulse.setRepeatMode(ValueAnimator.REVERSE);
+        connectionPulse.setRepeatCount(ValueAnimator.INFINITE);
         valveSwitch = findViewById(R.id.open_valve_switch);
         valveStateTextView = findViewById(R.id.valve_state_txt);
         valueDefaultColor = valveStateTextView.getTextColors();
@@ -121,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         valveStatePulse.setDuration(600);
         valveStatePulse.setRepeatMode(ValueAnimator.REVERSE);
         valveStatePulse.setRepeatCount(ValueAnimator.INFINITE);
-        heaterSwitch = findViewById(R.id.heate_on_light);
+        heaterLight = findViewById(R.id.heate_on_light);
         grayWaterLevelTextView = findViewById(R.id.gray_water_lvl_txt);
         grayWaterTempTextView = findViewById(R.id.gray_water_lvl_temp);
         cleanWaterLevelTextView = findViewById(R.id.clean_water_lvl_txt);
@@ -138,8 +150,6 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
                 requestValve(checked);
             }
         });
-        // The heater switch is only an indicator: swallow touches, so it cannot be dragged either
-        heaterSwitch.setOnTouchListener((v, event) -> true);
 
         setupSettingsTab();
         showDisconnected(R.string.disconnected, COLOR_OFF);
@@ -312,6 +322,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     protected void onDestroy() {
         super.onDestroy();
         stopValveStatePulse();
+        connectionPulse.cancel();
         // The session, if any, goes on in the service
         if (service != null) {
             service.setListener(null);
@@ -462,15 +473,19 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         valveStateTextView.setAlpha(1f);
     }
 
-    private void showHeater(boolean on) {
-        heaterSwitch.setChecked(on);
-        heaterSwitch.setTrackTintList(ColorStateList.valueOf(on ? COLOR_ON : COLOR_OFF));
+    /** Heater light: green on, red off, grey without a value or a connection. */
+    private void showHeater(Boolean on) {
+        heaterOn = on;
+        int color = !connected || on == null ? COLOR_UNKNOWN : on ? COLOR_ON : COLOR_OFF;
+        heaterLight.setBackgroundTintList(ColorStateList.valueOf(color));
+        heaterLight.setContentDescription(getString(R.string.heater) + ": "
+                + getString(on == null ? R.string.no_value : on ? R.string.heater_on : R.string.heater_off));
     }
 
     /** Controls are usable only when there is a value to show and the GATT client is free. */
     private void refreshControls() {
         valveSwitch.setEnabled(connected && ready && confirmedValve != null);
-        heaterSwitch.setEnabled(connected);
+        showHeater(heaterOn);
         boolean settingsEnabled = connected && ready && settingsKnown;
         buzzerSwitch.setEnabled(settingsEnabled);
         autoHeatingSwitch.setEnabled(settingsEnabled);
@@ -478,10 +493,24 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         heatingThresholdSeek.setEnabled(settingsEnabled);
     }
 
+    /** Connection pill: border and light in the state colour, a light fill, the light pulses while connecting. */
+    private void showConnectionState(int text, int color) {
+        connectionText.setText(text);
+        GradientDrawable pill = (GradientDrawable) connectionPill.getBackground().mutate();
+        pill.setStroke(Math.round(2 * getResources().getDisplayMetrics().density), color);
+        pill.setColor(Color.argb(40, Color.red(color), Color.green(color), Color.blue(color)));
+        connectionLight.setBackgroundTintList(ColorStateList.valueOf(color));
+        if (color == COLOR_PENDING) {
+            if (!connectionPulse.isStarted()) connectionPulse.start();
+        } else {
+            connectionPulse.cancel();
+            connectionLight.setAlpha(1f);
+        }
+    }
+
     private void showConnected() {
         connected = true;
-        connectionText.setText(R.string.connected);
-        connectionText.setTextColor(COLOR_ON);
+        showConnectionState(R.string.connected, COLOR_ON);
         refreshControls();
     }
 
@@ -492,10 +521,9 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         confirmedValve = null;
         pendingValve = null;
         settingsKnown = false;
-        connectionText.setText(statusText);
-        connectionText.setTextColor(statusColor);
+        showConnectionState(statusText, statusColor);
         showValve(false);
-        showHeater(false);
+        showHeater(null);
         stopValveStatePulse();
         for (TextView view : new TextView[]{valveStateTextView, pitchTextView, rollTextView}) {
             view.setTextColor(valueDefaultColor);

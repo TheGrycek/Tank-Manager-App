@@ -22,7 +22,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textStyle="bold"
-            android:textSize="20sp"
+            android:textSize="21sp"
             tools:text="NAME"
             />
 
@@ -31,7 +31,7 @@
             android:id="@+id/item_bt_uuid"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="16sp"
+            android:textSize="17sp"
             tools:text="UUID"
             />
 
