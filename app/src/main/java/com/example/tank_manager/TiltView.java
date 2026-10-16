@@ -35,6 +35,7 @@ public class TiltView extends View {
     static final int COLOR_NEAR = Color.parseColor("#E87823");
     static final int COLOR_TILTED = Color.RED;
 
+    private static final int MAX_SIZE_DP = 160;
     private static final int OUTLINE = Color.parseColor("#1F3A5F");
     private static final int BODY = Color.parseColor("#EAF6FC");
     private static final int WINDOW = Color.parseColor("#8FD3F4");
@@ -121,9 +122,10 @@ public class TiltView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        // Square, as large as the width allows
+        // Square, as large as the width allows, but not huge on a wide (landscape) screen
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        int height = resolveSize(width, heightMeasureSpec);
+        int max = Math.round(MAX_SIZE_DP * getResources().getDisplayMetrics().density);
+        int height = resolveSize(Math.min(width, max), heightMeasureSpec);
         int size = Math.min(width, height);
         setMeasuredDimension(width, size);
     }

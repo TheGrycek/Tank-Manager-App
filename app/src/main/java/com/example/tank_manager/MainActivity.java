@@ -31,8 +31,11 @@ import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.tabs.TabLayout;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
@@ -102,6 +105,25 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     // True while the controls are being set from a value received from the controller
     private boolean applyingSettings = false;
 
+    // --- History tab ---
+    private static final long DAY_S = 86400;
+    private static final long[] RANGES_S = {DAY_S, 7 * DAY_S, 30 * DAY_S};
+    // Rates are averaged over this period
+    private static final long RATE_WINDOW_S = 7 * DAY_S;
+    private static final String PREF_GRAY_THRESHOLD = "gray_threshold";
+    // Firmware default, until the controller has reported its setting
+    private static final int DEFAULT_GRAY_THRESHOLD = 90;
+    private View historyLayout;
+    private HistoryChart historyChart;
+    private TabLayout historyRange;
+    private TextView grayInflowText;
+    private TextView grayFullInText;
+    private TextView grayLastEmptyingText;
+    private TextView cleanUseText;
+    private TextView cleanEmptyInText;
+    private TextView cleanLastRefillText;
+    private final SimpleDateFormat eventFormat = new SimpleDateFormat("dd.MM HH:mm", Locale.getDefault());
+
     @SuppressLint("ClickableViewAccessibility")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -153,6 +175,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         });
 
         setupSettingsTab();
+        setupHistoryTab();
         showDisconnected(R.string.disconnected, COLOR_OFF);
 
         bound = bindService(new Intent(this, TankService.class), serviceConnection, BIND_AUTO_CREATE);
@@ -174,9 +197,11 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         tabLayout.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
             @Override
             public void onTabSelected(TabLayout.Tab tab) {
-                boolean settings = tab.getPosition() == 1;
-                statusGroup.setVisibility(settings ? View.GONE : View.VISIBLE);
-                settingsLayout.setVisibility(settings ? View.VISIBLE : View.GONE);
+                int position = tab.getPosition();
+                statusGroup.setVisibility(position == 0 ? View.VISIBLE : View.GONE);
+                settingsLayout.setVisibility(position == 1 ? View.VISIBLE : View.GONE);
+                historyLayout.setVisibility(position == 2 ? View.VISIBLE : View.GONE);
+                refreshHistory();
             }
 
             @Override
@@ -207,6 +232,82 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
         grayThresholdSeek.setOnSeekBarChangeListener(seekListener);
         heatingThresholdSeek.setOnSeekBarChangeListener(seekListener);
         updateSettingsLabels();
+    }
+
+    private void setupHistoryTab() {
+        historyLayout = findViewById(R.id.history_layout);
+        historyChart = findViewById(R.id.history_chart);
+        historyRange = findViewById(R.id.history_range);
+        grayInflowText = findViewById(R.id.hist_gray_inflow);
+        grayFullInText = findViewById(R.id.hist_gray_full_in);
+        grayLastEmptyingText = findViewById(R.id.hist_gray_last_emptying);
+        cleanUseText = findViewById(R.id.hist_clean_use);
+        cleanEmptyInText = findViewById(R.id.hist_clean_empty_in);
+        cleanLastRefillText = findViewById(R.id.hist_clean_last_refill);
+        historyRange.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+                refreshHistory();
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) { }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) { }
+        });
+    }
+
+    /** Chart and statistics from the stored history; only while the History tab is shown. */
+    private void refreshHistory() {
+        if (historyLayout.getVisibility() != View.VISIBLE) {
+            return;
+        }
+        long now = System.currentTimeMillis() / 1000;
+        long range = RANGES_S[Math.max(0, historyRange.getSelectedTabPosition())];
+        List<HistorySample> month = HistoryStore.get(this).since(now - RANGES_S[RANGES_S.length - 1]);
+        List<HistorySample> shown = new ArrayList<>();
+        List<HistorySample> recent = new ArrayList<>();
+        for (HistorySample sample : month) {
+            if (sample.time >= now - range) shown.add(sample);
+            if (sample.time >= now - RATE_WINDOW_S) recent.add(sample);
+        }
+        historyChart.setData(shown, now - range, now, getString(R.string.history_no_data));
+
+        HistorySample last = month.isEmpty() ? null : month.get(month.size() - 1);
+        Float inflow = HistoryStats.grayFillPerDay(recent);
+        Float use = HistoryStats.cleanUsePerDay(recent);
+        grayInflowText.setText(formatRate(inflow));
+        cleanUseText.setText(formatRate(use));
+        // The threshold in force, or the last one received when not connected
+        int threshold = settingsKnown ? shownSettings().grayThreshold
+                : getPreferences(MODE_PRIVATE).getInt(PREF_GRAY_THRESHOLD, DEFAULT_GRAY_THRESHOLD);
+        grayFullInText.setText(last == null ? getString(R.string.no_value)
+                : formatDays(HistoryStats.daysUntil(threshold - last.gray, inflow)));
+        cleanEmptyInText.setText(last == null ? getString(R.string.no_value)
+                : formatDays(HistoryStats.daysUntil(last.clean, use)));
+        grayLastEmptyingText.setText(formatEvent(HistoryStats.grayEmptyings(month)));
+        cleanLastRefillText.setText(formatEvent(HistoryStats.cleanRefills(month)));
+    }
+
+    private String formatRate(Float perDay) {
+        return perDay == null ? getString(R.string.no_value) : getString(R.string.percent_per_day, perDay);
+    }
+
+    private String formatDays(Float days) {
+        if (days == null) {
+            return getString(R.string.no_value);
+        }
+        if (days == 0) {
+            return getString(R.string.now);
+        }
+        return days < 1 ? getString(R.string.in_hours, Math.max(1, Math.round(days * 24)))
+                : getString(R.string.in_days, days);
+    }
+
+    private String formatEvent(List<Long> times) {
+        return times.isEmpty() ? getString(R.string.no_value)
+                : eventFormat.format(new Date(times.get(times.size() - 1) * 1000));
     }
 
     private Protocol.Settings shownSettings() {
@@ -363,6 +464,11 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     @Override
     public void onValue(UUID characteristic, byte[] value) {
         showValue(characteristic, value);
+    }
+
+    @Override
+    public void onHistoryChanged() {
+        refreshHistory();
     }
 
     @Override
@@ -586,6 +692,8 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
             if (settings != null && !grayThresholdSeek.isPressed() && !heatingThresholdSeek.isPressed()) {
                 applySettings(settings);
                 settingsKnown = true;
+                getPreferences(MODE_PRIVATE).edit().putInt(PREF_GRAY_THRESHOLD, settings.grayThreshold).apply();
+                refreshHistory();
                 refreshControls();
             }
         }

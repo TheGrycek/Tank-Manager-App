@@ -2,6 +2,8 @@ package com.example.tank_manager;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 /** BLE protocol of the tank controller: UUIDs and payload formats (see esp32/main.py). */
@@ -17,6 +19,8 @@ final class Protocol {
     static final UUID VALVE_STATE_UUID = UUID.fromString("00000000-0000-0000-0000-000000000006");
     static final UUID HEATER_UUID = UUID.fromString("00000000-0000-0000-0000-000000000007");
     static final UUID SETTINGS_UUID = UUID.fromString("00000000-0000-0000-0000-000000000008");
+    // Level history: the app writes a request, the samples come back as notifications
+    static final UUID HISTORY_UUID = UUID.fromString("00000000-0000-0000-0000-000000000009");
     // Standard BLE descriptor for notifications
     static final UUID CCCD_UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
 
@@ -52,6 +56,64 @@ final class Protocol {
         }
         ByteBuffer buffer = ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN);
         return new float[]{buffer.getFloat(), buffer.getFloat(), buffer.getFloat()};
+    }
+
+    /** History request: the first sample number the app lacks and the current Unix time. */
+    static byte[] historyRequest(long fromSeq, long unixSeconds) {
+        return ByteBuffer.allocate(8).order(ByteOrder.LITTLE_ENDIAN)
+                .putInt((int) fromSeq).putInt((int) unixSeconds).array();
+    }
+
+    /**
+     * One HISTORY notification: the number of its first sample and the samples, none in the packet
+     * that ends a transfer (its number is then the next sample the controller will take).
+     */
+    static final class HistoryPacket {
+        static final int HEADER_SIZE = 5;
+        static final int RECORD_SIZE = 8;
+        // Time field flag: seconds since the controller started, the date was not known
+        static final long UNKNOWN_TIME = 0x80000000L;
+
+        final long firstSeq;
+        final List<HistorySample> samples;
+
+        private HistoryPacket(long firstSeq, List<HistorySample> samples) {
+            this.firstSeq = firstSeq;
+            this.samples = samples;
+        }
+
+        boolean isEnd() {
+            return samples.isEmpty();
+        }
+
+        /** Next sample number after this packet. */
+        long nextSeq() {
+            return firstSeq + samples.size();
+        }
+
+        /** Null when the payload is short or its length does not match the count. */
+        static HistoryPacket decode(byte[] value) {
+            if (value == null || value.length < HEADER_SIZE) {
+                return null;
+            }
+            ByteBuffer buffer = ByteBuffer.wrap(value).order(ByteOrder.LITTLE_ENDIAN);
+            long firstSeq = buffer.getInt() & 0xFFFFFFFFL;
+            int count = buffer.get() & 0xFF;
+            if (value.length != HEADER_SIZE + count * RECORD_SIZE) {
+                return null;
+            }
+            List<HistorySample> samples = new ArrayList<>(count);
+            for (int i = 0; i < count; i++) {
+                long time = buffer.getInt() & 0xFFFFFFFFL;
+                int gray = buffer.get() & 0xFF;
+                int clean = buffer.get() & 0xFF;
+                short temp = buffer.getShort();
+                // The top bit of the gray level flags driving, the one of the clean level a tilt
+                samples.add(new HistorySample((time & UNKNOWN_TIME) != 0 ? -1 : time, gray & 0x7F, clean & 0x7F,
+                        temp == Short.MIN_VALUE ? null : temp / 100.0f, (gray & 0x80) != 0, (clean & 0x80) != 0));
+            }
+            return new HistoryPacket(firstSeq, samples);
+        }
     }
 
     private static final String[] COMPASS_POINTS = {"N", "NE", "E", "SE", "S", "SW", "W", "NW"};

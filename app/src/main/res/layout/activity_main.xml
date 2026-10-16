@@ -7,7 +7,10 @@
     android:layout_height="match_parent"
     android:background="#F4EDCF"
     android:orientation="vertical"
-    tools:context=".MainActivity">
+    tools:context=".MainActivity"
+    tools:ignore="TooManyViews">
+
+    <!-- One screen with three tabs: more than 80 views, but only one tab is laid out at a time -->
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -102,6 +105,9 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="8dp"
         android:background="#E7C55B"
+        app:tabGravity="fill"
+        app:tabMaxWidth="0dp"
+        app:tabMode="fixed"
         app:tabTextAppearance="@style/TabText">
 
         <com.google.android.material.tabs.TabItem
@@ -113,6 +119,11 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/tab_settings" />
+
+        <com.google.android.material.tabs.TabItem
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/tab_history" />
     </com.google.android.material.tabs.TabLayout>
 
     <ScrollView
@@ -131,6 +142,7 @@
                 android:id="@+id/status_group"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:clipChildren="false"
                 android:orientation="vertical">
 
                 <TextView
@@ -161,11 +173,13 @@
                 </LinearLayout>
 
                 <!-- Label, actual valve state, then the switch on the same row; the switch draws its track
-                     12 dp inside its bounds, the negative margin puts the track flush with the values -->
+                     12 dp inside its bounds, the negative margin puts the track flush with the values.
+                     The thumb then reaches past the row, so neither the row nor status_group clips. -->
                 <LinearLayout
                     android:layout_marginHorizontal="12dp"
                     android:layout_width="match_parent"
                     android:layout_height="48dp"
+                    android:clipChildren="false"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
@@ -418,6 +432,184 @@
                     style="@style/Label"
                     android:layout_height="48dp"
                     android:text="@string/settings_fill_mode" />
+            </LinearLayout>
+            <!-- History downloaded from the controller: chart and statistics -->
+            <LinearLayout
+                android:id="@+id/history_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/history_levels" />
+
+                <com.google.android.material.tabs.TabLayout
+                    android:id="@+id/history_range"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@android:color/transparent"
+                    app:tabGravity="fill"
+                    app:tabMaxWidth="0dp"
+                    app:tabMode="fixed"
+                    app:tabTextAppearance="@style/TabText">
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_day" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_week" />
+
+                    <com.google.android.material.tabs.TabItem
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/range_month" />
+                </com.google.android.material.tabs.TabLayout>
+
+                <com.example.tank_manager.HistoryChart
+                    android:id="@+id/history_chart"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_marginTop="8dp" />
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/gray_water_tank" />
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_inflow" />
+
+                    <TextView
+                        android:id="@+id/hist_gray_inflow"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_full_in" />
+
+                    <TextView
+                        android:id="@+id/hist_gray_full_in"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_last_emptying" />
+
+                    <TextView
+                        android:id="@+id/hist_gray_last_emptying"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
+
+                <TextView
+                    style="@style/SectionTitle"
+                    android:layout_marginTop="16dp"
+                    android:text="@string/clean_water_tank" />
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_use" />
+
+                    <TextView
+                        android:id="@+id/hist_clean_use"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_empty_in" />
+
+                    <TextView
+                        android:id="@+id/hist_clean_empty_in"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="48dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        style="@style/Label"
+                        android:layout_width="0dp"
+                        android:layout_weight="1"
+                        android:text="@string/history_last_refill" />
+
+                    <TextView
+                        android:id="@+id/hist_clean_last_refill"
+                        style="@style/Value"
+                        android:layout_width="wrap_content"
+                        android:text="@string/no_value" />
+                </LinearLayout>
             </LinearLayout>
         </FrameLayout>
     </ScrollView>

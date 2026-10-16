@@ -39,6 +39,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Owns the BLE link to the tank controller, so it survives the screens: while a device is
@@ -57,6 +59,9 @@ public class TankService extends Service {
         void onValue(UUID characteristic, byte[] value);
 
         void onValveWriteResult(boolean ok);
+
+        /** New history samples have been stored. */
+        void onHistoryChanged();
     }
 
     public class LocalBinder extends Binder {
@@ -71,6 +76,8 @@ public class TankService extends Service {
     private static final long RECONNECT_DELAY_MS = 3000;
     private static final long DISCOVERY_DELAY_MS = 500;
     private static final String ACTION_DISCONNECT = "com.example.tank_manager.DISCONNECT";
+    // Largest ATT MTU asked for: a history packet then carries 29 samples instead of one
+    private static final int HISTORY_MTU = 247;
 
     private final IBinder binder = new LocalBinder();
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -80,6 +87,11 @@ public class TankService extends Service {
     private volatile BluetoothGatt bluetoothGatt;
     // Queue for enabling notifications sequentially
     private final Queue<BluetoothGattCharacteristic> notificationQueue = new LinkedList<>();
+    // Downloaded history; written on its own thread, in the order the packets arrive
+    private HistoryStore historyStore;
+    private final ExecutorService historyExecutor = Executors.newSingleThreadExecutor();
+    // Our MTU request is pending (Android 14+ also exchanges the MTU by itself right after connecting)
+    private volatile boolean mtuRequested = false;
 
     // --- Everything below is touched only on the main thread ---
     private Listener listener;
@@ -97,6 +109,7 @@ public class TankService extends Service {
     public void onCreate() {
         super.onCreate();
         bluetoothAdapter = getSystemService(BluetoothManager.class).getAdapter();
+        historyStore = HistoryStore.get(this);
         IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
         filter.addAction(ACTION_DISCONNECT);
         ContextCompat.registerReceiver(this, receiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -124,6 +137,7 @@ public class TankService extends Service {
         unregisterReceiver(receiver);
         handler.removeCallbacks(reconnect);
         closeGatt();
+        historyExecutor.shutdown();
     }
 
     // ------------------------------------------------------------------ API for the screen
@@ -418,6 +432,8 @@ public class TankService extends Service {
                     notificationQueue.add(service.getCharacteristic(Protocol.VALVE_STATE_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.HEATER_UUID));
                     notificationQueue.add(service.getCharacteristic(Protocol.SETTINGS_UUID));
+                    // Missing on older firmware: then skipped
+                    notificationQueue.add(service.getCharacteristic(Protocol.HISTORY_UUID));
                     // Start the process
                     enableNextNotification(gatt);
                 } else {
@@ -456,6 +472,10 @@ public class TankService extends Service {
         }
 
         private void valueReceived(BluetoothGatt gatt, UUID charUuid, byte[] value) {
+            if (Protocol.HISTORY_UUID.equals(charUuid)) {
+                historyReceived(gatt, value);
+                return;
+            }
             handler.post(() -> {
                 if (gatt != bluetoothGatt) {
                     return;
@@ -476,7 +496,10 @@ public class TankService extends Service {
             } else {
                 Log.e(TAG, "Failed to write characteristic, status: " + status);
             }
-            if (Protocol.VALVE_UUID.equals(characteristic.getUuid())) {
+            if (Protocol.HISTORY_UUID.equals(characteristic.getUuid())) {
+                // The history request was the last step of the set-up; the samples come as notifications
+                markReady(gatt);
+            } else if (Protocol.VALVE_UUID.equals(characteristic.getUuid())) {
                 handler.post(() -> {
                     if (gatt == bluetoothGatt && listener != null) {
                         listener.onValveWriteResult(ok);
@@ -484,7 +507,72 @@ public class TankService extends Service {
                 });
             }
         }
+
+        @Override
+        public void onMtuChanged(BluetoothGatt gatt, int mtu, int status) {
+            super.onMtuChanged(gatt, mtu, status);
+            Log.i(TAG, "MTU " + mtu + ", status " + status);
+            if (mtuRequested && gatt == bluetoothGatt) {
+                mtuRequested = false;
+                requestHistory(gatt);
+            }
+        }
     };
+
+    /**
+     * After the notifications: a larger MTU, then the request for the history samples the app lacks,
+     * with the current time (the controller does not know the date). Only then are writes allowed.
+     */
+    @SuppressLint("MissingPermission")
+    private void startHistorySync(BluetoothGatt gatt) {
+        BluetoothGattService service = gatt.getService(Protocol.SERVICE_UUID);
+        if (service == null || service.getCharacteristic(Protocol.HISTORY_UUID) == null) {
+            markReady(gatt); // older firmware without the history
+            return;
+        }
+        mtuRequested = true;
+        if (!hasConnectPermission() || !gatt.requestMtu(HISTORY_MTU)) {
+            mtuRequested = false;
+            requestHistory(gatt);
+        }
+    }
+
+    private void requestHistory(BluetoothGatt gatt) {
+        BluetoothGattService service = gatt.getService(Protocol.SERVICE_UUID);
+        BluetoothGattCharacteristic characteristic = service == null ? null
+                : service.getCharacteristic(Protocol.HISTORY_UUID);
+        byte[] request = Protocol.historyRequest(historyStore.nextSeq(), System.currentTimeMillis() / 1000);
+        if (characteristic == null || !hasConnectPermission() || !writeCharacteristic(gatt, characteristic, request)) {
+            Log.w(TAG, "Could not ask for the history");
+            markReady(gatt);
+        }
+    }
+
+    /** History packet (binder thread): store the samples and remember where to continue next time. */
+    private void historyReceived(BluetoothGatt gatt, byte[] value) {
+        Protocol.HistoryPacket packet = Protocol.HistoryPacket.decode(value);
+        if (packet == null || gatt != bluetoothGatt) {
+            return;
+        }
+        historyExecutor.execute(() -> {
+            int stored = historyStore.add(packet.samples);
+            historyStore.setNextSeq(packet.nextSeq());
+            if (packet.isEnd() || stored > 0) {
+                handler.post(() -> {
+                    if (listener != null) listener.onHistoryChanged();
+                });
+            }
+        });
+    }
+
+    private void markReady(BluetoothGatt gatt) {
+        handler.post(() -> {
+            if (gatt == bluetoothGatt && !ready) {
+                ready = true;
+                if (listener != null) listener.onStateChanged();
+            }
+        });
+    }
 
     /**
      * Sequentially enables notifications for all characteristics in the queue.
@@ -503,12 +591,7 @@ public class TankService extends Service {
         }
         if (descriptor == null) {
             Log.i(TAG, "All notifications enabled.");
-            handler.post(() -> {
-                if (gatt == bluetoothGatt) {
-                    ready = true;
-                    if (listener != null) listener.onStateChanged();
-                }
-            });
+            startHistorySync(gatt);
             return;
         }
 
