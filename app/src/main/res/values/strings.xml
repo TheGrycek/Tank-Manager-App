@@ -21,6 +21,7 @@
     <string name="valve_open">Open</string>
     <string name="valve_closing">Closing…</string>
     <string name="valve_opening">Opening…</string>
+    <string name="valve_error">ERROR</string>
     <string name="heater">Heater</string>
     <string name="heater_on">on</string>
     <string name="heater_off">off</string>

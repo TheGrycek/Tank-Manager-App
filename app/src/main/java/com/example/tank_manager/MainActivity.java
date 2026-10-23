@@ -75,7 +75,8 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     private View connectionLight;
     private ObjectAnimator connectionPulse;
     private Switch valveSwitch;
-    // Actual valve state (closed / opening / open / closing), pulsing while the valve moves
+    // Actual valve state (closed / opening / open / closing / error), pulsing while the valve moves
+    // and on an error
     private TextView valveStateTextView;
     // Text colour of the Value style, for values that are coloured while shown
     private ColorStateList valueDefaultColor;
@@ -547,7 +548,7 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
     private void showValveState(int state) {
         int text;
         int color;
-        boolean moving = false;
+        boolean pulse = false;
         switch (state) {
             case Protocol.VALVE_OPEN:
                 text = R.string.valve_open;
@@ -556,23 +557,28 @@ public class MainActivity extends AppCompatActivity implements TankService.Liste
             case Protocol.VALVE_CLOSING:
                 text = R.string.valve_closing;
                 color = COLOR_PENDING;
-                moving = true;
+                pulse = true;
                 break;
             case Protocol.VALVE_OPENING:
                 text = R.string.valve_opening;
                 color = COLOR_PENDING;
-                moving = true;
+                pulse = true;
                 break;
             case Protocol.VALVE_CLOSED:
                 text = R.string.valve_closed;
                 color = COLOR_OFF;
+                break;
+            case Protocol.VALVE_ERROR:
+                text = R.string.valve_error;
+                color = COLOR_OFF;
+                pulse = true;
                 break;
             default:
                 return;
         }
         valveStateTextView.setText(text);
         valveStateTextView.setTextColor(color);
-        if (!moving) {
+        if (!pulse) {
             stopValveStatePulse();
         } else if (!valveStatePulse.isStarted()) {
             valveStatePulse.start();

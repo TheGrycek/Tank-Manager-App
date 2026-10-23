@@ -28,6 +28,8 @@ final class Protocol {
     static final int VALVE_OPEN = 1;
     static final int VALVE_CLOSING = 2;
     static final int VALVE_OPENING = 3;
+    // A move failed (no motor current or the motor did not stop); the next command retries
+    static final int VALVE_ERROR = 4;
 
     private Protocol() { }
 
