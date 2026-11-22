@@ -10,3 +10,4 @@
 local.properties
 .idea/vcs.xml
 *.md
+!README.md
